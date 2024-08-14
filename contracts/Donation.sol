@@ -126,7 +126,7 @@ contract Donation is ReentrancyGuard, Ownable {
         //     userBooCash.createUser(address(0), address(0));
         // }
         totalPool += amount;
-
+        uniLevelDistribution(amount);
         userBooCash.incrementTotalInvestment(msg.sender, amount);
         userBooCash.setVideo(msg.sender, false);
         uint totalValue = calculateTotalValue(msg.sender);
@@ -138,6 +138,32 @@ contract Donation is ReentrancyGuard, Ownable {
         token.transferFrom(msg.sender, address(this), amount);
 
         emit UserDeposited(msg.sender, amount, block.timestamp);
+    }
+
+    function uniLevelDistribution(uint amount) internal {
+        IUserBooCash.UserStruct memory userStruct = userBooCash.getUser(
+            msg.sender
+        );
+        if (totalPool == 150000000 ether) {
+            token.transfer(userStruct.level1, amount / 10);
+            token.transfer(userStruct.level2, amount / 20);
+            token.transfer(userStruct.level3, (amount * 3) / 100);
+            token.transfer(userStruct.level4, amount / 50);
+            token.transfer(userStruct.level5, amount / 100);
+        } else if (totalPool == 75000000 ether) {
+            token.transfer(userStruct.level1, amount / 20);
+            token.transfer(userStruct.level2, (amount * 5) / 200);
+            token.transfer(userStruct.level3, (amount * 3) / 200);
+            token.transfer(userStruct.level4, amount / 100);
+            token.transfer(userStruct.level5, amount / 200);
+        } else if (totalPool == 35000000 ether) {
+            //TODO:Recalcular aqui
+            token.transfer(userStruct.level1, amount / 10);
+            token.transfer(userStruct.level2, amount / 20);
+            token.transfer(userStruct.level3, (amount * 3) / 100);
+            token.transfer(userStruct.level4, amount / 50);
+            token.transfer(userStruct.level5, amount / 100);
+        }
     }
 
     function withdraw(uint amount) external nonReentrant {
