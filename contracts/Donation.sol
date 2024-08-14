@@ -23,7 +23,6 @@ contract Donation is ReentrancyGuard, Ownable {
     IUserBooCash public userBooCash;
     uint public totalPool;
     uint24 public limitPeriod = 15 days;
-    uint32 public paymentDuration = 30 days;
     IERC20 private immutable token;
     mapping(address => Stake.UserStake) public users;
 
@@ -36,28 +35,15 @@ contract Donation is ReentrancyGuard, Ownable {
         userBooCash = IUserBooCash(initialUser);
     }
 
-    function calculateDurationLocked(
-        address user
-    ) internal view returns (uint8) {
-        // uint8 durationLocked = uint8(
-        //     (block.timestamp - users[user].timestampMonths) / paymentDuration
-        // );
-        // return
-        //     (durationLocked + users[user].monthsLocked > 12)
-        //         ? 12
-        //         : durationLocked;
-    }
-
     function timeUntilNextWithdrawal(
         address user
     ) external view returns (uint256) {
-        uint256 currentTime = block.timestamp;
-        uint256 timeElapsed = currentTime - users[user].startedTimestamp;
+        uint256 timeElapsed = block.timestamp - users[user].startedTimestamp;
 
         if (timeElapsed < limitPeriod) {
             return limitPeriod - timeElapsed;
-        } else if (timeElapsed < paymentDuration) {
-            return paymentDuration - timeElapsed;
+        } else if (timeElapsed < limitPeriod * 2) {
+            return limitPeriod * 2 - timeElapsed;
         } else {
             return 0;
         }
@@ -111,7 +97,7 @@ contract Donation is ReentrancyGuard, Ownable {
 
     function deposit(uint amount) external nonReentrant {
         require(
-            users[msg.sender].balance == 0,
+            !hasActiveDonation(msg.sender),
             "You can't have more than 1 donation"
         );
         require(
@@ -119,15 +105,11 @@ contract Donation is ReentrancyGuard, Ownable {
             "Amount must be between 10 and 10,000 dollars"
         );
 
-        // if (
-        //     users[msg.sender].balance == 0 &&
-        //     userBooCash.getUser(msg.sender).registered == false
-        // ) {
-        //     userBooCash.createUser(address(0), address(0));
-        // }
+        // TODO: recalcular o totalInvestment dos 100 level1
         totalPool += amount;
         uniLevelDistribution(amount);
-        userBooCash.incrementTotalInvestment(msg.sender, amount);
+        recursiveIncrement(msg.sender, amount, 100);
+
         userBooCash.setVideo(msg.sender, false);
         uint totalValue = calculateTotalValue(msg.sender);
         users[msg.sender].balance = totalValue;
@@ -140,30 +122,96 @@ contract Donation is ReentrancyGuard, Ownable {
         emit UserDeposited(msg.sender, amount, block.timestamp);
     }
 
+    function recursiveIncrement(
+        address user,
+        uint amount,
+        uint depth
+    ) internal {
+        if (depth == 0) {
+            return;
+        }
+
+        IUserBooCash.UserStruct memory userStruct = userBooCash.getUser(user);
+        userBooCash.incrementTotalInvestment(user, amount);
+
+        if (userStruct.level1 != address(0)) {
+            recursiveIncrement(userStruct.level1, amount, depth - 1);
+        }
+    }
+
     function uniLevelDistribution(uint amount) internal {
         IUserBooCash.UserStruct memory userStruct = userBooCash.getUser(
             msg.sender
         );
-        if (totalPool == 150000000 ether) {
-            token.transfer(userStruct.level1, amount / 10);
-            token.transfer(userStruct.level2, amount / 20);
-            token.transfer(userStruct.level3, (amount * 3) / 100);
-            token.transfer(userStruct.level4, amount / 50);
-            token.transfer(userStruct.level5, amount / 100);
-        } else if (totalPool == 75000000 ether) {
-            token.transfer(userStruct.level1, amount / 20);
-            token.transfer(userStruct.level2, (amount * 5) / 200);
-            token.transfer(userStruct.level3, (amount * 3) / 200);
-            token.transfer(userStruct.level4, amount / 100);
-            token.transfer(userStruct.level5, amount / 200);
-        } else if (totalPool == 35000000 ether) {
-            //TODO:Recalcular aqui
-            token.transfer(userStruct.level1, amount / 10);
-            token.transfer(userStruct.level2, amount / 20);
-            token.transfer(userStruct.level3, (amount * 3) / 100);
-            token.transfer(userStruct.level4, amount / 50);
-            token.transfer(userStruct.level5, amount / 100);
+        if (totalPool >= 150000000 ether) {
+            if (hasActiveDonation(userStruct.level1)) {
+                token.transfer(userStruct.level1, amount / 10);
+            }
+            if (hasActiveDonation(userStruct.level2)) {
+                token.transfer(userStruct.level2, amount / 20);
+            }
+            if (hasActiveDonation(userStruct.level3)) {
+                token.transfer(userStruct.level3, (amount * 3) / 100);
+            }
+            if (hasActiveDonation(userStruct.level4)) {
+                token.transfer(userStruct.level4, amount / 50);
+            }
+            if (hasActiveDonation(userStruct.level5)) {
+                token.transfer(userStruct.level5, amount / 100);
+            }
+        } else if (totalPool >= 75000000 ether) {
+            if (hasActiveDonation(userStruct.level1)) {
+                token.transfer(userStruct.level1, amount / 20);
+            }
+            if (hasActiveDonation(userStruct.level2)) {
+                token.transfer(userStruct.level2, (amount * 5) / 200);
+            }
+            if (hasActiveDonation(userStruct.level3)) {
+                token.transfer(userStruct.level3, (amount * 3) / 200);
+            }
+            if (hasActiveDonation(userStruct.level4)) {
+                token.transfer(userStruct.level4, amount / 100);
+            }
+            if (hasActiveDonation(userStruct.level5)) {
+                token.transfer(userStruct.level5, amount / 200);
+            }
+        } else if (totalPool >= 35000000 ether) {
+            if (hasActiveDonation(userStruct.level1)) {
+                token.transfer(userStruct.level1, (amount * 5) / 200);
+            }
+            if (hasActiveDonation(userStruct.level2)) {
+                token.transfer(userStruct.level2, (amount * 5) / 400);
+            }
+            if (hasActiveDonation(userStruct.level3)) {
+                token.transfer(userStruct.level3, (amount * 75) / 10000);
+            }
+            if (hasActiveDonation(userStruct.level4)) {
+                token.transfer(userStruct.level4, (amount * 50) / 10000);
+            }
+            if (hasActiveDonation(userStruct.level5)) {
+                token.transfer(userStruct.level5, (amount * 50) / 20000);
+            }
+        } else {
+            if (hasActiveDonation(userStruct.level1)) {
+                token.transfer(userStruct.level1, amount / 100);
+            }
+            if (hasActiveDonation(userStruct.level2)) {
+                token.transfer(userStruct.level2, (amount) / 200);
+            }
+            if (hasActiveDonation(userStruct.level3)) {
+                token.transfer(userStruct.level3, (amount) / 400);
+            }
+            if (hasActiveDonation(userStruct.level4)) {
+                token.transfer(userStruct.level4, (amount) / 400);
+            }
+            if (hasActiveDonation(userStruct.level5)) {
+                token.transfer(userStruct.level5, (amount) / 400);
+            }
         }
+    }
+
+    function hasActiveDonation(address user) public view returns (bool) {
+        return users[user].balance > 0;
     }
 
     function withdraw(uint amount) external nonReentrant {
