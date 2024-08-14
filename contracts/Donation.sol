@@ -10,7 +10,6 @@ import "hardhat/console.sol";
 library Stake {
     struct UserStake {
         uint balance;
-        uint timestamp;
         uint startedTimestamp;
         uint poolValue;
     }
@@ -21,7 +20,6 @@ contract Donation is ReentrancyGuard, Ownable {
     event UserWithdrawn(address indexed user, uint amount, uint timestamp);
 
     IUserBooCash public userBooCash;
-    uint public totalPool;
     uint24 public limitPeriod = 15 days;
     IERC20 private immutable token;
     mapping(address => Stake.UserStake) public users;
@@ -96,6 +94,12 @@ contract Donation is ReentrancyGuard, Ownable {
     }
 
     function deposit(uint amount) external nonReentrant {
+        IUserBooCash.UserStruct memory userStruct = userBooCash.getUser(
+            msg.sender
+        );
+        if (!userStruct.registered) {
+            userBooCash.createUser(address(0));
+        }
         require(
             !hasActiveDonation(msg.sender),
             "You can't have more than 1 donation"
@@ -104,45 +108,26 @@ contract Donation is ReentrancyGuard, Ownable {
             amount >= 10 ether && amount <= 10000 ether,
             "Amount must be between 10 and 10,000 dollars"
         );
+        token.transferFrom(msg.sender, address(this), amount);
 
-        // TODO: recalcular o totalInvestment dos 100 level1
-        totalPool += amount;
-        uniLevelDistribution(amount);
+        uint totalPool = token.balanceOf(address(this));
+
+        uniLevelDistribution(amount, totalPool, userStruct);
         recursiveIncrement(msg.sender, amount, 100);
 
         userBooCash.setVideo(msg.sender, false);
-        uint totalValue = calculateTotalValue(msg.sender);
-        users[msg.sender].balance = totalValue;
+        users[msg.sender].balance = amount;
         users[msg.sender].startedTimestamp = block.timestamp;
-        users[msg.sender].timestamp = block.timestamp;
         users[msg.sender].poolValue = totalPool;
-
-        token.transferFrom(msg.sender, address(this), amount);
 
         emit UserDeposited(msg.sender, amount, block.timestamp);
     }
 
-    function recursiveIncrement(
-        address user,
+    function uniLevelDistribution(
         uint amount,
-        uint depth
+        uint totalPool,
+        IUserBooCash.UserStruct memory userStruct
     ) internal {
-        if (depth == 0) {
-            return;
-        }
-
-        IUserBooCash.UserStruct memory userStruct = userBooCash.getUser(user);
-        userBooCash.incrementTotalInvestment(user, amount);
-
-        if (userStruct.level1 != address(0)) {
-            recursiveIncrement(userStruct.level1, amount, depth - 1);
-        }
-    }
-
-    function uniLevelDistribution(uint amount) internal {
-        IUserBooCash.UserStruct memory userStruct = userBooCash.getUser(
-            msg.sender
-        );
         if (totalPool >= 150000000 ether) {
             if (hasActiveDonation(userStruct.level1)) {
                 token.transfer(userStruct.level1, amount / 10);
@@ -210,21 +195,35 @@ contract Donation is ReentrancyGuard, Ownable {
         }
     }
 
+    function recursiveIncrement(
+        address user,
+        uint amount,
+        uint depth
+    ) internal {
+        if (depth == 0) {
+            return;
+        }
+        IUserBooCash.UserStruct memory userStruct = userBooCash.getUser(user);
+        userBooCash.incrementTotalInvestment(user, amount);
+        if (userStruct.level1 != address(0)) {
+            recursiveIncrement(userStruct.level1, amount, depth - 1);
+        }
+    }
+
     function hasActiveDonation(address user) public view returns (bool) {
         return users[user].balance > 0;
     }
 
-    function withdraw(uint amount) external nonReentrant {
+    function withdraw() external nonReentrant {
         require(
             users[msg.sender].startedTimestamp + limitPeriod <= block.timestamp,
             "Tokens are still locked"
         );
 
         uint totalValue = calculateTotalValue(msg.sender);
-        require(totalValue >= amount, "Insufficient balance for withdrawal");
 
-        users[msg.sender].balance = totalValue - amount;
-        token.transfer(msg.sender, amount);
-        emit UserWithdrawn(msg.sender, amount, block.timestamp);
+        users[msg.sender].balance = 0;
+        token.transfer(msg.sender, totalValue);
+        emit UserWithdrawn(msg.sender, totalValue, block.timestamp);
     }
 }

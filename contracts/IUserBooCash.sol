@@ -27,4 +27,6 @@ interface IUserBooCash {
     function incrementTotalInvestment(address user, uint amount) external;
 
     function setVideo(address user, bool value) external;
+
+    function createUser(address level1) external;
 }

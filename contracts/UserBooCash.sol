@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-
+import "hardhat/console.sol";
 struct UserStruct {
     bool registered;
     uint8 totalLevels;
@@ -70,7 +70,9 @@ contract UserBooCash is Ownable {
     }
 
     function incrementTotalInvestment(address user, uint amount) external {
-        users[user].totalInvestment += amount;
+        if (users[user].totalInvestment <= 3000 ether) {
+            users[user].totalInvestment += amount;
+        }
     }
 
     function setVideo(address user, bool value) external {

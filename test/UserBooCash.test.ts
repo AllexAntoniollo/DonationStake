@@ -32,8 +32,6 @@ describe("UserBooCash", function () {
   });
 
   it("Should create a user with 6 levels", async function () {
-    this.timeout(120000);
-
     const { owner, otherAccount, user, userAddress } = await loadFixture(
       deployFixture
     );
