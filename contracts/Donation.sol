@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./IUserAidMut.sol";
+import "./IUniswapAidMut.sol";
 import "hardhat/console.sol";
 
 library Donation {
@@ -33,6 +34,7 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
 
     IUserAidMut public userAidMut;
     uint24 public limitPeriod = 15 days;
+    IUniswapAidMut public uniswapOracle;
 
     Donation.PoolPayment[4] public poolPayments;
     IERC20 private immutable token;
@@ -87,6 +89,10 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
         );
     }
 
+    function setUniswapOracle(address _address) external onlyOwner {
+        uniswapOracle = IUniswapAidMut(_address);
+    }
+
     function setVideo(address user) external onlyOwner {
         users[user].hasVideo = true;
     }
@@ -105,7 +111,7 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
         }
     }
 
-    function deposit(uint amount) external nonReentrant {
+    function deposit(uint128 amount, bool teste) external nonReentrant {
         IUserAidMut.UserStruct memory userStruct = userAidMut.getUser(
             msg.sender
         );
@@ -114,8 +120,14 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
             !hasActiveDonation(msg.sender),
             "You can't have more than 1 donation"
         );
+        uint amountUsdt;
+        if (teste) {
+            amountUsdt = amount;
+        } else {
+            amountUsdt = uniswapOracle.estimateAmountOut(amount);
+        }
         require(
-            amount >= 10 ether && amount <= 10000 ether,
+            amountUsdt >= 10 ether && amountUsdt <= 10000 ether,
             "Amount must be between 10 and 10,000 dollars"
         );
         token.transferFrom(msg.sender, address(this), amount);
@@ -123,7 +135,7 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
         uint totalPool = token.balanceOf(address(this));
 
         uniLevelDistribution(amount, userStruct);
-        recursiveIncrement(msg.sender, amount, 100);
+        recursiveIncrement(msg.sender, amountUsdt, 100);
 
         users[msg.sender].balance = amount;
         users[msg.sender].startedTimestamp = block.timestamp;

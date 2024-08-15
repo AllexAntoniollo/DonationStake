@@ -48,7 +48,7 @@ describe("Donation", function () {
       token,
       donationAddress,
     } = await loadFixture(deployFixture);
-    await donation.deposit(ethers.parseUnits("10", "ether"));
+    await donation.deposit(ethers.parseUnits("10", "ether"), true);
 
     expect((await donation.getUser(owner.address)).balance).to.be.equal(
       ethers.parseUnits("10", "ether")
@@ -66,20 +66,20 @@ describe("Donation", function () {
       await loadFixture(deployFixture);
 
     await expect(
-      donation.deposit(ethers.parseUnits("9", "ether"))
+      donation.deposit(ethers.parseUnits("9", "ether"), true)
     ).revertedWith("Amount must be between 10 and 10,000 dollars");
     await expect(
-      donation.deposit(ethers.parseUnits("11000", "ether"))
+      donation.deposit(ethers.parseUnits("11000", "ether"), true)
     ).revertedWith("Amount must be between 10 and 10,000 dollars");
   });
   it("Should not create donation (more than 1 donation)", async function () {
     const { owner, otherAccount, user, userAddress, donation } =
       await loadFixture(deployFixture);
 
-    await donation.deposit(ethers.parseUnits("10", "ether"));
+    await donation.deposit(ethers.parseUnits("10", "ether"), true);
 
     await expect(
-      donation.deposit(ethers.parseUnits("10", "ether"))
+      donation.deposit(ethers.parseUnits("10", "ether"), true)
     ).revertedWith("You can't have more than 1 donation");
   });
   it("Should not create donation (unregistered)", async function () {
@@ -87,7 +87,9 @@ describe("Donation", function () {
       await loadFixture(deployFixture);
 
     await expect(
-      donation.connect(otherAccount).deposit(ethers.parseUnits("10", "ether"))
+      donation
+        .connect(otherAccount)
+        .deposit(ethers.parseUnits("10", "ether"), true)
     ).revertedWith("Unregistered user");
   });
   it("Should withdraw donation", async function () {
@@ -101,7 +103,7 @@ describe("Donation", function () {
       donationAddress,
     } = await loadFixture(deployFixture);
 
-    await donation.deposit(ethers.parseUnits("10", "ether"));
+    await donation.deposit(ethers.parseUnits("10", "ether"), true);
 
     await time.increase(60 * 60 * 24 * 15);
     expect((await donation.getUser(owner.address)).balance).to.be.equal(
@@ -111,7 +113,7 @@ describe("Donation", function () {
     await donation.withdraw();
     expect((await donation.getUser(owner.address)).balance).to.be.equal(0);
 
-    await donation.deposit(ethers.parseUnits("10", "ether"));
+    await donation.deposit(ethers.parseUnits("10", "ether"), true);
 
     await time.increase(60 * 60 * 24 * 30);
     expect((await donation.getUser(owner.address)).balance).to.be.equal(
@@ -121,7 +123,7 @@ describe("Donation", function () {
     await donation.withdraw();
     expect((await donation.getUser(owner.address)).balance).to.be.equal(0);
 
-    await donation.deposit(ethers.parseUnits("10", "ether"));
+    await donation.deposit(ethers.parseUnits("10", "ether"), true);
     await donation.setVideo(owner.address);
     expect((await donation.getUser(owner.address)).balance).to.be.equal(
       ethers.parseUnits("10", "ether")
@@ -146,7 +148,7 @@ describe("Donation", function () {
     await donation.withdraw();
     expect((await donation.getUser(owner.address)).balance).to.be.equal(0);
 
-    await donation.deposit(ethers.parseUnits("10", "ether"));
+    await donation.deposit(ethers.parseUnits("10", "ether"), true);
     await donation.setVideo(owner.address);
 
     await time.increase(60 * 60 * 24 * 15);
@@ -167,7 +169,7 @@ describe("Donation", function () {
       donationAddress,
     } = await loadFixture(deployFixture);
     await token.mint(donationAddress, ethers.parseUnits("35000000", "ether"));
-    await donation.deposit(ethers.parseUnits("10", "ether"));
+    await donation.deposit(ethers.parseUnits("10", "ether"), true);
 
     await time.increase(60 * 60 * 24 * 15);
     expect((await donation.getUser(owner.address)).balance).to.be.equal(
@@ -176,7 +178,7 @@ describe("Donation", function () {
 
     await donation.withdraw();
 
-    await donation.deposit(ethers.parseUnits("10", "ether"));
+    await donation.deposit(ethers.parseUnits("10", "ether"), true);
     await donation.setVideo(owner.address);
     await time.increase(60 * 60 * 24 * 30);
 
@@ -184,7 +186,7 @@ describe("Donation", function () {
       ethers.parseUnits("11.25", "ether")
     );
     await donation.withdraw();
-    await donation.deposit(ethers.parseUnits("10", "ether"));
+    await donation.deposit(ethers.parseUnits("10", "ether"), true);
 
     await time.increase(60 * 60 * 24 * 35);
 
@@ -203,7 +205,7 @@ describe("Donation", function () {
       donationAddress,
     } = await loadFixture(deployFixture);
     await token.mint(donationAddress, ethers.parseUnits("75000000", "ether"));
-    await donation.deposit(ethers.parseUnits("10", "ether"));
+    await donation.deposit(ethers.parseUnits("10", "ether"), true);
 
     await time.increase(60 * 60 * 24 * 15);
     expect((await donation.getUser(owner.address)).balance).to.be.equal(
@@ -212,7 +214,7 @@ describe("Donation", function () {
 
     await donation.withdraw();
 
-    await donation.deposit(ethers.parseUnits("10", "ether"));
+    await donation.deposit(ethers.parseUnits("10", "ether"), true);
     await donation.setVideo(owner.address);
     await time.increase(60 * 60 * 24 * 30);
 
@@ -220,7 +222,7 @@ describe("Donation", function () {
       ethers.parseUnits("12.5", "ether")
     );
     await donation.withdraw();
-    await donation.deposit(ethers.parseUnits("10", "ether"));
+    await donation.deposit(ethers.parseUnits("10", "ether"), true);
 
     await time.increase(60 * 60 * 24 * 35);
 
@@ -239,7 +241,7 @@ describe("Donation", function () {
       donationAddress,
     } = await loadFixture(deployFixture);
     await token.mint(donationAddress, ethers.parseUnits("150000000", "ether"));
-    await donation.deposit(ethers.parseUnits("10", "ether"));
+    await donation.deposit(ethers.parseUnits("10", "ether"), true);
 
     await time.increase(60 * 60 * 24 * 15);
     expect((await donation.getUser(owner.address)).balance).to.be.equal(
@@ -248,7 +250,7 @@ describe("Donation", function () {
 
     await donation.withdraw();
 
-    await donation.deposit(ethers.parseUnits("10", "ether"));
+    await donation.deposit(ethers.parseUnits("10", "ether"), true);
     await donation.setVideo(owner.address);
     await time.increase(60 * 60 * 24 * 30);
 
@@ -256,7 +258,7 @@ describe("Donation", function () {
       ethers.parseUnits("15", "ether")
     );
     await donation.withdraw();
-    await donation.deposit(ethers.parseUnits("10", "ether"));
+    await donation.deposit(ethers.parseUnits("10", "ether"), true);
 
     await time.increase(60 * 60 * 24 * 35);
 
@@ -275,7 +277,7 @@ describe("Donation", function () {
       donationAddress,
     } = await loadFixture(deployFixture);
 
-    await donation.deposit(ethers.parseUnits("10", "ether"));
+    await donation.deposit(ethers.parseUnits("10", "ether"), true);
 
     await time.increase(60 * 60 * 24 * 14);
 
@@ -319,7 +321,7 @@ describe("Donation", function () {
     for (let index = 0; index < 6; index++) {
       await donation
         .connect(allSigners[index])
-        .deposit(ethers.parseUnits("1000", "ether"));
+        .deposit(ethers.parseUnits("1000", "ether"), true);
     }
     for (let index = 0; index < 6; index++) {
       const baseValue = 6000 - 1000 * index;
@@ -345,7 +347,7 @@ describe("Donation", function () {
         .approve(donationAddress, ethers.parseUnits("1000", "ether"));
       await donation
         .connect(allSigners[index])
-        .deposit(ethers.parseUnits("1000", "ether"));
+        .deposit(ethers.parseUnits("1000", "ether"), true);
     }
     await time.increase(15 * 24 * 60 * 60);
     for (let index = 0; index < 6; index++) {
@@ -363,7 +365,7 @@ describe("Donation", function () {
         .approve(donationAddress, ethers.parseUnits("1000", "ether"));
       await donation
         .connect(allSigners[index])
-        .deposit(ethers.parseUnits("1000", "ether"));
+        .deposit(ethers.parseUnits("1000", "ether"), true);
     }
     await time.increase(15 * 24 * 60 * 60);
     for (let index = 0; index < 6; index++) {
@@ -381,7 +383,7 @@ describe("Donation", function () {
         .approve(donationAddress, ethers.parseUnits("1000", "ether"));
       await donation
         .connect(allSigners[index])
-        .deposit(ethers.parseUnits("1000", "ether"));
+        .deposit(ethers.parseUnits("1000", "ether"), true);
     }
     await time.increase(15 * 24 * 60 * 60);
     for (let index = 0; index < 6; index++) {
