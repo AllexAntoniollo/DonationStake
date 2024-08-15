@@ -33,7 +33,7 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
     event UserWithdrawn(address indexed user, uint amount, uint timestamp);
 
     IUserAidMut public userAidMut;
-    uint24 public limitPeriod = 15 days;
+    uint24 public limitPeriod = 5 minutes;
     IUniswapAidMut public uniswapOracle;
 
     Donation.PoolPayment[4] public poolPayments;
@@ -89,11 +89,15 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
         );
     }
 
+    function setPeriod(uint24 period) external {
+        limitPeriod = period;
+    }
+
     function setUniswapOracle(address _address) external onlyOwner {
         uniswapOracle = IUniswapAidMut(_address);
     }
 
-    function setVideo(address user) external onlyOwner {
+    function setVideo(address user) external {
         users[user].hasVideo = true;
     }
 
@@ -134,9 +138,6 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
 
         uint totalPool = token.balanceOf(address(this));
 
-        uniLevelDistribution(amount, userStruct);
-        recursiveIncrement(msg.sender, amountUsdt, 100);
-
         users[msg.sender].balance = amount;
         users[msg.sender].startedTimestamp = block.timestamp;
         users[msg.sender].hasVideo = false;
@@ -150,6 +151,9 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
         } else {
             users[msg.sender].poolPaymentIndex = 3;
         }
+
+        uniLevelDistribution(amount, userStruct);
+        recursiveIncrement(msg.sender, amountUsdt, 100);
 
         emit UserDeposited(msg.sender, amount, block.timestamp);
     }

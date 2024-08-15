@@ -17,8 +17,6 @@ contract UserAidMut is Ownable {
 
     mapping(address => UserStruct) private users;
 
-    address public constant defaultUser = address(0);
-
     constructor(address initialOwner) Ownable(initialOwner) {
         users[initialOwner].registered = true;
     }
@@ -38,7 +36,7 @@ contract UserAidMut is Ownable {
         );
 
         if (users[level1].registered == false) {
-            level1 = defaultUser;
+            level1 = owner();
         }
 
         UserStruct memory patrocinador = users[level1];
