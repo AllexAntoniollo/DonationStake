@@ -156,8 +156,10 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
                 )
             );
         }
-        if (hasActiveDonation(userStruct.level2)) {
-            //TotalInvestment >= 500
+        if (
+            hasActiveDonation(userStruct.level2) &&
+            users[userStruct.level2].totalInvestment >= 500 ether
+        ) {
             token.transfer(
                 userStruct.level2,
                 getPercentage(
@@ -166,8 +168,10 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
                 )
             );
         }
-        if (hasActiveDonation(userStruct.level3)) {
-            //TotalInvestment >= 1000
+        if (
+            hasActiveDonation(userStruct.level3) &&
+            users[userStruct.level3].totalInvestment >= 1000 ether
+        ) {
             token.transfer(
                 userStruct.level3,
                 getPercentage(
@@ -176,8 +180,10 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
                 )
             );
         }
-        if (hasActiveDonation(userStruct.level4)) {
-            //TotalInvestment >= 2000
+        if (
+            hasActiveDonation(userStruct.level4) &&
+            users[userStruct.level4].totalInvestment >= 2000 ether
+        ) {
             token.transfer(
                 userStruct.level4,
                 getPercentage(
@@ -186,8 +192,10 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
                 )
             );
         }
-        if (hasActiveDonation(userStruct.level5)) {
-            //TotalInvestment >= 3000
+        if (
+            hasActiveDonation(userStruct.level5) &&
+            users[userStruct.level5].totalInvestment >= 3000 ether
+        ) {
             token.transfer(
                 userStruct.level5,
                 getPercentage(

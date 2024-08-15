@@ -25,7 +25,7 @@ describe("Donation", function () {
 
     await token.mint(donationAddress, ethers.parseUnits("1000", "ether"));
     await token.mint(owner.address, ethers.parseUnits("100", "ether"));
-    await token.approve(donationAddress, ethers.parseUnits("100", "ether"));
+    await token.approve(donationAddress, ethers.parseUnits("1000", "ether"));
 
     return {
       owner,
@@ -298,6 +298,7 @@ describe("Donation", function () {
     } = await loadFixture(deployFixture);
 
     const allSigners = [owner];
+    await token.mint(owner.address, ethers.parseUnits("10000", "ether"));
     for (let i = 0; i < 6; i++) {
       const wallet = ethers.Wallet.createRandom().connect(ethers.provider);
       allSigners.push(wallet);
@@ -306,10 +307,10 @@ describe("Donation", function () {
         to: wallet.address,
         value: ethers.parseEther("1.0"),
       });
-      await token.mint(wallet.address, ethers.parseUnits("100", "ether"));
+      await token.mint(wallet.address, ethers.parseUnits("1000", "ether"));
       await token
         .connect(wallet)
-        .approve(donationAddress, ethers.parseUnits("100", "ether"));
+        .approve(donationAddress, ethers.parseUnits("1000", "ether"));
     }
 
     for (let i = 1; i < 7; i++) {
@@ -318,17 +319,20 @@ describe("Donation", function () {
     for (let index = 0; index < 6; index++) {
       await donation
         .connect(allSigners[index])
-        .deposit(ethers.parseUnits("100", "ether"));
+        .deposit(ethers.parseUnits("1000", "ether"));
     }
     for (let index = 0; index < 6; index++) {
-      const expectedValue = ethers.parseUnits(
-        String(600 - 100 * index),
-        "ether"
-      );
-      expect(
-        (await donation.getUser(allSigners[index].address)).totalInvestment
-      ).to.be.equal(expectedValue);
+      const baseValue = 6000 - 1000 * index;
+      const expectedValue =
+        baseValue > 3000
+          ? ethers.parseUnits("4000", "ether")
+          : ethers.parseUnits(String(baseValue), "ether");
+
+      const actualValue = await donation.getUser(allSigners[index].address);
+
+      expect(actualValue.totalInvestment).to.be.equal(expectedValue);
     }
+
     await time.increase(15 * 24 * 60 * 60);
 
     for (let index = 0; index < 6; index++) {
@@ -338,10 +342,10 @@ describe("Donation", function () {
     for (let index = 0; index < 6; index++) {
       await token
         .connect(allSigners[index])
-        .approve(donationAddress, ethers.parseUnits("100", "ether"));
+        .approve(donationAddress, ethers.parseUnits("1000", "ether"));
       await donation
         .connect(allSigners[index])
-        .deposit(ethers.parseUnits("100", "ether"));
+        .deposit(ethers.parseUnits("1000", "ether"));
     }
     await time.increase(15 * 24 * 60 * 60);
     for (let index = 0; index < 6; index++) {
@@ -356,10 +360,10 @@ describe("Donation", function () {
     for (let index = 0; index < 6; index++) {
       await token
         .connect(allSigners[index])
-        .approve(donationAddress, ethers.parseUnits("100", "ether"));
+        .approve(donationAddress, ethers.parseUnits("1000", "ether"));
       await donation
         .connect(allSigners[index])
-        .deposit(ethers.parseUnits("100", "ether"));
+        .deposit(ethers.parseUnits("1000", "ether"));
     }
     await time.increase(15 * 24 * 60 * 60);
     for (let index = 0; index < 6; index++) {
@@ -374,10 +378,10 @@ describe("Donation", function () {
     for (let index = 0; index < 6; index++) {
       await token
         .connect(allSigners[index])
-        .approve(donationAddress, ethers.parseUnits("100", "ether"));
+        .approve(donationAddress, ethers.parseUnits("1000", "ether"));
       await donation
         .connect(allSigners[index])
-        .deposit(ethers.parseUnits("100", "ether"));
+        .deposit(ethers.parseUnits("1000", "ether"));
     }
     await time.increase(15 * 24 * 60 * 60);
     for (let index = 0; index < 6; index++) {
