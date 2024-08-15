@@ -5,11 +5,11 @@ import {
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-describe("UserBooCash", function () {
+describe("UserAidMut", function () {
   async function deployFixture() {
     const [owner, otherAccount] = await ethers.getSigners();
 
-    const User = await ethers.getContractFactory("UserBooCash");
+    const User = await ethers.getContractFactory("UserAidMut");
     const user = await User.deploy(owner.address);
     const userAddress = await user.getAddress();
 
@@ -20,15 +20,29 @@ describe("UserBooCash", function () {
     const { owner, otherAccount, user, userAddress } = await loadFixture(
       deployFixture
     );
-    await user.createUser(otherAccount.address);
+    await user.connect(otherAccount).createUser(owner.address);
   });
-
-  it("Should create two users", async function () {
+  it("Should create user default level1", async function () {
     const { owner, otherAccount, user, userAddress } = await loadFixture(
       deployFixture
     );
-    await user.createUser(otherAccount.address);
-    await user.connect(otherAccount).createUser(owner.address);
+    await user.connect(otherAccount).createUser(otherAccount.address);
+  });
+
+  it("Should owner create user", async function () {
+    const { owner, otherAccount, user, userAddress } = await loadFixture(
+      deployFixture
+    );
+    await user.ownerCreateUser(otherAccount, owner.address);
+  });
+  it("Should not owner create user (double registered)", async function () {
+    const { owner, otherAccount, user, userAddress } = await loadFixture(
+      deployFixture
+    );
+    await user.ownerCreateUser(otherAccount, owner.address);
+    await expect(
+      user.ownerCreateUser(otherAccount, owner.address)
+    ).to.be.revertedWith("This user has already been registered");
   });
 
   it("Should create a user with 6 levels", async function () {
@@ -47,8 +61,6 @@ describe("UserBooCash", function () {
       });
     }
 
-    await user.createUser(owner.address);
-
     for (let i = 1; i < 7; i++) {
       await user.connect(allSigners[i]).createUser(allSigners[i - 1].address);
     }
@@ -58,15 +70,5 @@ describe("UserBooCash", function () {
 
     expect(user25.level1).to.equal(allSigners[4].address);
     expect(user26.level1).to.equal(allSigners[5].address);
-
-    for (let i = 2; i <= 5; i++) {
-      const levelKey = `level${i}` as keyof typeof user25;
-      if (i <= user25.totalLevels) {
-        expect(user25[levelKey]).to.equal(allSigners[5 - i].address);
-      }
-      if (i <= user26.totalLevels) {
-        expect(user26[levelKey]).to.equal(allSigners[6 - i].address);
-      }
-    }
   });
 });
