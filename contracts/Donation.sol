@@ -33,7 +33,7 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
     event UserWithdrawn(address indexed user, uint amount, uint timestamp);
 
     IUserAidMut public userAidMut;
-    uint24 public limitPeriod = 5 minutes;
+    uint24 public limitPeriod = 15 days;
     IUniswapAidMut public uniswapOracle;
 
     Donation.PoolPayment[4] public poolPayments;
@@ -87,6 +87,10 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
             200,
             250
         );
+    }
+
+    function getContractPoolBalance() external view returns (uint) {
+        return token.balanceOf(address(this));
     }
 
     function setPeriod(uint24 period) external {

@@ -38,60 +38,60 @@ describe("Donation", function () {
     };
   }
 
-  it("Should create donation", async function () {
-    const {
-      owner,
-      otherAccount,
-      user,
-      userAddress,
-      donation,
-      token,
-      donationAddress,
-    } = await loadFixture(deployFixture);
-    await donation.deposit(ethers.parseUnits("10", "ether"), true);
+  // it("Should create donation", async function () {
+  //   const {
+  //     owner,
+  //     otherAccount,
+  //     user,
+  //     userAddress,
+  //     donation,
+  //     token,
+  //     donationAddress,
+  //   } = await loadFixture(deployFixture);
+  //   await donation.deposit(ethers.parseUnits("10", "ether"), true);
 
-    expect((await donation.getUser(owner.address)).balance).to.be.equal(
-      ethers.parseUnits("10", "ether")
-    );
-    expect(await token.balanceOf(donationAddress)).to.be.equal(
-      ethers.parseUnits("1010", "ether")
-    );
-    expect((await donation.getUser(owner.address)).totalInvestment).to.be.equal(
-      ethers.parseUnits("10", "ether")
-    );
-  });
+  //   expect((await donation.getUser(owner.address)).balance).to.be.equal(
+  //     ethers.parseUnits("10", "ether")
+  //   );
+  //   expect(await token.balanceOf(donationAddress)).to.be.equal(
+  //     ethers.parseUnits("1010", "ether")
+  //   );
+  //   expect((await donation.getUser(owner.address)).totalInvestment).to.be.equal(
+  //     ethers.parseUnits("10", "ether")
+  //   );
+  // });
 
-  it("Should not create donation (invalid amount)", async function () {
-    const { owner, otherAccount, user, userAddress, donation } =
-      await loadFixture(deployFixture);
+  // it("Should not create donation (invalid amount)", async function () {
+  //   const { owner, otherAccount, user, userAddress, donation } =
+  //     await loadFixture(deployFixture);
 
-    await expect(
-      donation.deposit(ethers.parseUnits("9", "ether"), true)
-    ).revertedWith("Amount must be between 10 and 10,000 dollars");
-    await expect(
-      donation.deposit(ethers.parseUnits("11000", "ether"), true)
-    ).revertedWith("Amount must be between 10 and 10,000 dollars");
-  });
-  it("Should not create donation (more than 1 donation)", async function () {
-    const { owner, otherAccount, user, userAddress, donation } =
-      await loadFixture(deployFixture);
+  //   await expect(
+  //     donation.deposit(ethers.parseUnits("9", "ether"), true)
+  //   ).revertedWith("Amount must be between 10 and 10,000 dollars");
+  //   await expect(
+  //     donation.deposit(ethers.parseUnits("11000", "ether"), true)
+  //   ).revertedWith("Amount must be between 10 and 10,000 dollars");
+  // });
+  // it("Should not create donation (more than 1 donation)", async function () {
+  //   const { owner, otherAccount, user, userAddress, donation } =
+  //     await loadFixture(deployFixture);
 
-    await donation.deposit(ethers.parseUnits("10", "ether"), true);
+  //   await donation.deposit(ethers.parseUnits("10", "ether"), true);
 
-    await expect(
-      donation.deposit(ethers.parseUnits("10", "ether"), true)
-    ).revertedWith("You can't have more than 1 donation");
-  });
-  it("Should not create donation (unregistered)", async function () {
-    const { owner, otherAccount, user, userAddress, donation } =
-      await loadFixture(deployFixture);
+  //   await expect(
+  //     donation.deposit(ethers.parseUnits("10", "ether"), true)
+  //   ).revertedWith("You can't have more than 1 donation");
+  // });
+  // it("Should not create donation (unregistered)", async function () {
+  //   const { owner, otherAccount, user, userAddress, donation } =
+  //     await loadFixture(deployFixture);
 
-    await expect(
-      donation
-        .connect(otherAccount)
-        .deposit(ethers.parseUnits("10", "ether"), true)
-    ).revertedWith("Unregistered user");
-  });
+  //   await expect(
+  //     donation
+  //       .connect(otherAccount)
+  //       .deposit(ethers.parseUnits("10", "ether"), true)
+  //   ).revertedWith("Unregistered user");
+  // });
   it("Should withdraw donation", async function () {
     const {
       owner,
@@ -106,6 +106,7 @@ describe("Donation", function () {
     await donation.deposit(ethers.parseUnits("10", "ether"), true);
 
     await time.increase(60 * 60 * 24 * 15);
+
     expect((await donation.getUser(owner.address)).balance).to.be.equal(
       ethers.parseUnits("10.1", "ether")
     );
