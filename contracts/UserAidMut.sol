@@ -2,7 +2,6 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "hardhat/console.sol";
 struct UserStruct {
     bool registered;
     address level1;

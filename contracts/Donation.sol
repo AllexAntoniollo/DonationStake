@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./IUserAidMut.sol";
 import "./IUniswapAidMut.sol";
-import "hardhat/console.sol";
 
 library Donation {
     struct UserDonation {
@@ -14,7 +13,7 @@ library Donation {
         uint startedTimestamp;
         uint poolPaymentIndex;
         bool hasVideo;
-        uint totalInvestment;
+        uint[5] totalInvestment;
     }
     struct PoolPayment {
         uint level1;
@@ -38,7 +37,7 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
 
     Donation.PoolPayment[4] public poolPayments;
     IERC20 private immutable token;
-    mapping(address => Donation.UserDonation) public users;
+    mapping(address => Donation.UserDonation) private users;
 
     constructor(
         address _token,
@@ -89,7 +88,7 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
         );
     }
 
-    function getContractPoolBalance() external view returns (uint) {
+    function getContractPoolBalance() public view returns (uint) {
         return token.balanceOf(address(this));
     }
 
@@ -101,7 +100,7 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
         uniswapOracle = IUniswapAidMut(_address);
     }
 
-    function setVideo(address user) external {
+    function setVideo(address user) external onlyOwner {
         users[user].hasVideo = true;
     }
 
@@ -126,7 +125,7 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
         require(userStruct.registered, "Unregistered user");
         require(
             !hasActiveDonation(msg.sender),
-            "You can't have more than 1 donation"
+            "You can not have more than 1 donation"
         );
         uint amountUsdt;
         if (teste) {
@@ -140,7 +139,7 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
         );
         token.transferFrom(msg.sender, address(this), amount);
 
-        uint totalPool = token.balanceOf(address(this));
+        uint totalPool = getContractPoolBalance();
 
         users[msg.sender].balance = amount;
         users[msg.sender].startedTimestamp = block.timestamp;
@@ -156,8 +155,8 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
             users[msg.sender].poolPaymentIndex = 3;
         }
 
+        recursiveIncrement(userStruct, amountUsdt);
         uniLevelDistribution(amount, userStruct);
-        recursiveIncrement(msg.sender, amountUsdt, 100);
 
         emit UserDeposited(msg.sender, amount, block.timestamp);
     }
@@ -178,7 +177,7 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
         }
         if (
             hasActiveDonation(userStruct.level2) &&
-            users[userStruct.level2].totalInvestment >= 500 ether
+            users[userStruct.level2].totalInvestment[1] >= 500 ether
         ) {
             token.transfer(
                 userStruct.level2,
@@ -190,7 +189,7 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
         }
         if (
             hasActiveDonation(userStruct.level3) &&
-            users[userStruct.level3].totalInvestment >= 1000 ether
+            users[userStruct.level3].totalInvestment[2] >= 1000 ether
         ) {
             token.transfer(
                 userStruct.level3,
@@ -202,7 +201,7 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
         }
         if (
             hasActiveDonation(userStruct.level4) &&
-            users[userStruct.level4].totalInvestment >= 2000 ether
+            users[userStruct.level4].totalInvestment[3] >= 2000 ether
         ) {
             token.transfer(
                 userStruct.level4,
@@ -214,7 +213,7 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
         }
         if (
             hasActiveDonation(userStruct.level5) &&
-            users[userStruct.level5].totalInvestment >= 3000 ether
+            users[userStruct.level5].totalInvestment[4] >= 3000 ether
         ) {
             token.transfer(
                 userStruct.level5,
@@ -280,24 +279,28 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
         }
     }
 
-    function hasActiveDonation(address user) public view returns (bool) {
+    function hasActiveDonation(address user) view internal returns (bool) {
         return users[user].balance > 0;
     }
 
     function recursiveIncrement(
-        address user,
-        uint amount,
-        uint depth
+        IUserAidMut.UserStruct memory user,
+        uint amount
     ) internal {
-        if (depth == 0) {
-            return;
+        if (user.level1 != address(0)) {
+            users[user.level1].totalInvestment[0] += amount;
         }
-        IUserAidMut.UserStruct memory userStruct = userAidMut.getUser(user);
-        if (users[user].totalInvestment <= 3000 ether) {
-            users[user].totalInvestment += amount;
+        if (user.level2 != address(0)) {
+            users[user.level2].totalInvestment[1] += amount;
         }
-        if (userStruct.level1 != address(0)) {
-            recursiveIncrement(userStruct.level1, amount, depth - 1);
+        if (user.level3 != address(0)) {
+            users[user.level3].totalInvestment[2] += amount;
+        }
+        if (user.level4 != address(0)) {
+            users[user.level4].totalInvestment[3] += amount;
+        }
+        if (user.level5 != address(0)) {
+            users[user.level5].totalInvestment[4] += amount;
         }
     }
 
