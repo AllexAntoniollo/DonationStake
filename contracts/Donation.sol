@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -28,8 +29,10 @@ library Donation {
 }
 
 contract DonationAidMut is ReentrancyGuard, Ownable {
-    event UserDeposited(address indexed user, uint amount, uint timestamp);
-    event UserWithdrawn(address indexed user, uint amount, uint timestamp);
+    using SafeERC20 for IERC20;
+
+    event UserDonated(address indexed user, uint amount, uint timestamp);
+    event UserClaimed(address indexed user, uint amount, uint timestamp);
 
     IUserAidMut public userAidMut;
     uint24 public limitPeriod = 15 days;
@@ -118,7 +121,7 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
         }
     }
 
-    function deposit(uint128 amount, bool teste) external nonReentrant {
+    function donate(uint128 amount) external nonReentrant {
         IUserAidMut.UserStruct memory userStruct = userAidMut.getUser(
             msg.sender
         );
@@ -127,38 +130,32 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
             !hasActiveDonation(msg.sender),
             "You can not have more than 1 donation"
         );
-        uint amountUsdt;
-        if (teste) {
-            amountUsdt = amount;
-        } else {
-            amountUsdt = uniswapOracle.estimateAmountOut(amount);
-        }
+        uint amountUsdt = uniswapOracle.estimateAmountOut(amount);
+
         require(
             amountUsdt >= 10 ether && amountUsdt <= 10000 ether,
             "Amount must be between 10 and 10,000 dollars"
         );
-        token.transferFrom(msg.sender, address(this), amount);
-
         uint totalPool = getContractPoolBalance();
 
         users[msg.sender].balance = amount;
         users[msg.sender].startedTimestamp = block.timestamp;
         users[msg.sender].hasVideo = false;
 
-        if (totalPool >= 150000000 ether) {
-            users[msg.sender].poolPaymentIndex = 0;
-        } else if (totalPool >= 75000000 ether) {
-            users[msg.sender].poolPaymentIndex = 1;
-        } else if (totalPool >= 35000000 ether) {
-            users[msg.sender].poolPaymentIndex = 2;
-        } else {
-            users[msg.sender].poolPaymentIndex = 3;
-        }
+        users[msg.sender].poolPaymentIndex = (totalPool >= 15e7 ether)
+            ? 0
+            : (totalPool >= 75e6 ether)
+            ? 1
+            : (totalPool >= 35e6 ether)
+            ? 2
+            : 3;
 
         recursiveIncrement(userStruct, amountUsdt);
         uniLevelDistribution(amount, userStruct);
 
-        emit UserDeposited(msg.sender, amount, block.timestamp);
+        token.safeTransferFrom(msg.sender, address(this), amount);
+
+        emit UserDonated(msg.sender, amount, block.timestamp);
     }
 
     function uniLevelDistribution(
@@ -167,7 +164,7 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
     ) internal {
         Donation.UserDonation memory userDonation = users[msg.sender];
         if (hasActiveDonation(userStruct.level1)) {
-            token.transfer(
+            token.safeTransfer(
                 userStruct.level1,
                 getPercentage(
                     amount,
@@ -179,7 +176,7 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
             hasActiveDonation(userStruct.level2) &&
             users[userStruct.level2].totalInvestment[1] >= 500 ether
         ) {
-            token.transfer(
+            token.safeTransfer(
                 userStruct.level2,
                 getPercentage(
                     amount,
@@ -191,7 +188,7 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
             hasActiveDonation(userStruct.level3) &&
             users[userStruct.level3].totalInvestment[2] >= 1000 ether
         ) {
-            token.transfer(
+            token.safeTransfer(
                 userStruct.level3,
                 getPercentage(
                     amount,
@@ -203,7 +200,7 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
             hasActiveDonation(userStruct.level4) &&
             users[userStruct.level4].totalInvestment[3] >= 2000 ether
         ) {
-            token.transfer(
+            token.safeTransfer(
                 userStruct.level4,
                 getPercentage(
                     amount,
@@ -215,7 +212,7 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
             hasActiveDonation(userStruct.level5) &&
             users[userStruct.level5].totalInvestment[4] >= 3000 ether
         ) {
-            token.transfer(
+            token.safeTransfer(
                 userStruct.level5,
                 getPercentage(
                     amount,
@@ -279,7 +276,7 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
         }
     }
 
-    function hasActiveDonation(address user) view internal returns (bool) {
+    function hasActiveDonation(address user) internal view returns (bool) {
         return users[user].balance > 0;
     }
 
@@ -304,7 +301,7 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
         }
     }
 
-    function withdraw() external nonReentrant {
+    function claimDonation() external nonReentrant {
         require(
             users[msg.sender].startedTimestamp + limitPeriod <= block.timestamp,
             "Tokens are still locked"
@@ -313,8 +310,8 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
         uint totalValue = calculateTotalValue(msg.sender);
 
         users[msg.sender].balance = 0;
-        token.transfer(msg.sender, totalValue);
-        emit UserWithdrawn(msg.sender, totalValue, block.timestamp);
+        token.safeTransfer(msg.sender, totalValue);
+        emit UserClaimed(msg.sender, totalValue, block.timestamp);
     }
 
     function getUser(

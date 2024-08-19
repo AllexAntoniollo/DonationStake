@@ -9,6 +9,8 @@ contract UniswapAidMut {
     address public poolWmaticUsdt;
     address public owner;
 
+    event OwnerChanged(address indexed previousOwner, address indexed newOwner);
+
     modifier onlyOwner() {
         require(msg.sender == owner, "Not the contract owner");
         _;
@@ -16,11 +18,14 @@ contract UniswapAidMut {
 
     constructor() {
         owner = msg.sender;
+        emit OwnerChanged(address(0), owner);
     }
 
     function changeOwner(address newOwner) external onlyOwner {
         require(newOwner != address(0), "New owner cannot be the zero address");
+        address oldOwner = owner;
         owner = newOwner;
+        emit OwnerChanged(oldOwner, newOwner);
     }
 
     function setPoolMutWmatic(uint24 _fee) external onlyOwner {

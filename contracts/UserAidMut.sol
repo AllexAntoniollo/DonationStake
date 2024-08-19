@@ -30,11 +30,11 @@ contract UserAidMut is Ownable {
 
     function _createUser(address user, address level1) internal {
         require(
-            users[user].registered == false,
+            !users[user].registered,
             "This user has already been registered"
         );
 
-        if (users[level1].registered == false) {
+        if (!users[level1].registered) {
             level1 = owner();
         }
 
