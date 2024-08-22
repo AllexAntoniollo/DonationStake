@@ -49,7 +49,7 @@ contract UniswapAidMut {
                 0xc2132D05D31c914a87C6611C10748AEb04B58e8F, //USDT
                 _fee
             );
-        require(_pool != address(0), "pool doesn't exist");
+        require(_pool != address(0), "pool does not exist");
 
         poolWmaticUsdt = _pool;
     }

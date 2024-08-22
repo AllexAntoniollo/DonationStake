@@ -21,14 +21,7 @@ contract UserAidMut is Ownable {
     }
 
     function createUser(address level1) external {
-        _createUser(tx.origin, level1);
-    }
-
-    function ownerCreateUser(address user, address level1) external {
-        _createUser(user, level1);
-    }
-
-    function _createUser(address user, address level1) internal {
+        address user = msg.sender;
         require(
             !users[user].registered,
             "This user has already been registered"

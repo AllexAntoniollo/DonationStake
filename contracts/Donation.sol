@@ -31,16 +31,19 @@ library Donation {
 contract DonationAidMut is ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
 
-    event UserDonated(address indexed user, uint amount, uint timestamp);
-    event UserClaimed(address indexed user, uint amount, uint timestamp);
+    event UserDonated(address indexed user, uint amount);
+    event ChangedBot(address indexed user);
+    event UserClaimed(address indexed user, uint amount);
 
-    IUserAidMut public userAidMut;
-    uint24 public limitPeriod = 15 days;
+    IUserAidMut public immutable userAidMut;
+    uint24 public constant limitPeriod = 15 days;
     IUniswapAidMut public uniswapOracle;
 
     Donation.PoolPayment[4] public poolPayments;
     IERC20 private immutable token;
+    address walletBot;
     mapping(address => Donation.UserDonation) private users;
+    mapping(address => bool) private blacklist;
 
     constructor(
         address _token,
@@ -91,25 +94,52 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
         );
     }
 
-    function getContractPoolBalance() public view returns (uint) {
-        return token.balanceOf(address(this));
+    modifier onlyBot() {
+        require(msg.sender == walletBot, "Only bot can call this function");
+        _;
     }
 
-    function setPeriod(uint24 period) external {
-        limitPeriod = period;
+    modifier notBlacklisted() {
+        require(!blacklist[msg.sender], "Address is blacklisted");
+        _;
+    }
+
+    function setWalletBot(address _address) external onlyOwner {
+        walletBot = _address;
+        emit ChangedBot(_address);
+    }
+
+    function getContractPoolBalance() public view returns (uint) {
+        return token.balanceOf(address(this));
     }
 
     function setUniswapOracle(address _address) external onlyOwner {
         uniswapOracle = IUniswapAidMut(_address);
     }
 
-    function setVideo(address user) external onlyOwner {
+    function addVideo(address user) external onlyBot {
         users[user].hasVideo = true;
+    }
+
+    function removeVideo(address user) external onlyBot {
+        users[user].hasVideo = false;
+    }
+
+    function addToBlacklist(address user) external onlyBot {
+        blacklist[user] = true;
+    }
+
+    function removeFromBlacklist(address user) external onlyBot {
+        blacklist[user] = false;
+    }
+
+    function isBlacklisted(address user) external view returns (bool) {
+        return blacklist[user];
     }
 
     function timeUntilNextWithdrawal(
         address user
-    ) external view returns (uint256) {
+    ) external view notBlacklisted returns (uint256) {
         uint256 timeElapsed = block.timestamp - users[user].startedTimestamp;
 
         if (timeElapsed < limitPeriod) {
@@ -121,14 +151,14 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
         }
     }
 
-    function donate(uint128 amount) external nonReentrant {
+    function donate(uint128 amount) external nonReentrant notBlacklisted {
         IUserAidMut.UserStruct memory userStruct = userAidMut.getUser(
             msg.sender
         );
         require(userStruct.registered, "Unregistered user");
         require(
             !hasActiveDonation(msg.sender),
-            "You can not have more than 1 donation"
+            "You cannot have more than 1 donation"
         );
         uint amountUsdt = uniswapOracle.estimateAmountOut(amount);
 
@@ -155,7 +185,7 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
 
         token.safeTransferFrom(msg.sender, address(this), amount);
 
-        emit UserDonated(msg.sender, amount, block.timestamp);
+        emit UserDonated(msg.sender, amount);
     }
 
     function uniLevelDistribution(
@@ -301,7 +331,7 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
         }
     }
 
-    function claimDonation() external nonReentrant {
+    function claimDonation() external nonReentrant notBlacklisted {
         require(
             users[msg.sender].startedTimestamp + limitPeriod <= block.timestamp,
             "Tokens are still locked"
@@ -311,12 +341,12 @@ contract DonationAidMut is ReentrancyGuard, Ownable {
 
         users[msg.sender].balance = 0;
         token.safeTransfer(msg.sender, totalValue);
-        emit UserClaimed(msg.sender, totalValue, block.timestamp);
+        emit UserClaimed(msg.sender, totalValue);
     }
 
     function getUser(
         address _user
-    ) external view returns (Donation.UserDonation memory) {
+    ) external view notBlacklisted returns (Donation.UserDonation memory) {
         Donation.UserDonation memory userDonation = users[_user];
         userDonation.balance = calculateTotalValue(_user);
         return userDonation;
